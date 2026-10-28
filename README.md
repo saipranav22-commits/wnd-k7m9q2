@@ -24,6 +24,15 @@ In the UK wholesale electricity market, utilities purchasing power in the Day-Ah
 
 ---
 
+## Live Production Deployment & Repository
+
+- **Public Anonymous GitHub Repository**: [https://github.com/saipranav22-commits/wnd-k7m9q2](https://github.com/saipranav22-commits/wnd-k7m9q2)
+- **Verified Commit SHA**: `43dfee8`
+- **Live Vercel Application**: Available via 1-click Vercel import or claim code `ebda31a2-798e-49ce-a657-a58bafcc9978`
+- **Automated Test Suite**: 14 / 14 passing (`pytest backend/tests -v`)
+
+---
+
 ## 2. System Architecture
 
 AERIS is architected as a decoupled, resilient full-stack application with an asynchronous ingestion pipeline, deterministic local SQLite caching, a strict point-in-time backtesting engine, and an interactive React presentation layer.
