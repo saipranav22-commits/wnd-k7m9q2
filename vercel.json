@@ -1,20 +1,12 @@
 {
-  "functions": {
-    "api/index.py": {
-      "excludeFiles": "{frontend/**,docs/**,tests/**,scripts/**,.venv/**,*.md,*.json,*.yml,*.whl,*.lock}"
-    }
-  },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "api/index.py"
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/dist/$1"
+      "source": "/((?!assets/|api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
