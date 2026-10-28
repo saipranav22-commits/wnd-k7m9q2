@@ -1,6 +1,6 @@
 import logging
+import math
 from typing import List, Dict, Any, Optional
-import numpy as np
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
@@ -17,7 +17,7 @@ class AccuracyEngine:
     def calculate_metrics_for_pairs(self, pairs: List[Dict[str, float]]) -> Dict[str, Any]:
         """
         Takes list of dicts with 'forecast' and 'actual' (in MW).
-        Returns calculated metrics.
+        Returns calculated metrics without heavy external C-extensions.
         """
         valid_pairs = [p for p in pairs if p.get("forecast") is not None and p.get("actual") is not None]
         N = len(valid_pairs)
@@ -39,25 +39,45 @@ class AccuracyEngine:
                 "quantiles": {"p10": 0.0, "p25": 0.0, "p50_median": 0.0, "p75": 0.0, "p90": 0.0},
             }
 
-        forecasts = np.array([p["forecast"] for p in valid_pairs], dtype=float)
-        actuals = np.array([p["actual"] for p in valid_pairs], dtype=float)
+        forecasts = [float(p["forecast"]) for p in valid_pairs]
+        actuals = [float(p["actual"]) for p in valid_pairs]
 
-        errors = forecasts - actuals  # signed error (MW)
-        abs_errors = np.abs(errors)
+        errors = [f - a for f, a in zip(forecasts, actuals)]  # signed error (MW)
+        abs_errors = [abs(e) for e in errors]
 
-        mae = float(np.mean(abs_errors))
-        rmse = float(np.sqrt(np.mean(errors ** 2)))
-        bias = float(np.mean(errors))
+        mae = sum(abs_errors) / N
+        rmse = math.sqrt(sum(e * e for e in errors) / N)
+        bias = sum(errors) / N
 
-        sum_actuals = float(np.sum(actuals))
-        sum_abs_errors = float(np.sum(abs_errors))
+        sum_actuals = sum(actuals)
+        sum_abs_errors = sum(abs_errors)
         wape = (sum_abs_errors / sum_actuals * 100.0) if sum_actuals > 0 else 0.0
 
-        overforecast_count = int(np.sum(errors > 0.01))
-        underforecast_count = int(np.sum(errors < -0.01))
+        overforecast_count = sum(1 for e in errors if e > 0.01)
+        underforecast_count = sum(1 for e in errors if e < -0.01)
 
-        # Quantiles of signed errors
-        q10, q25, q50, q75, q90 = np.percentile(errors, [10, 25, 50, 75, 90])
+        # Empirical quantiles of signed errors using standard linear interpolation
+        sorted_errors = sorted(errors)
+        def calc_percentile(sorted_list: List[float], pct: float) -> float:
+            if not sorted_list:
+                return 0.0
+            if len(sorted_list) == 1:
+                return sorted_list[0]
+            idx = (len(sorted_list) - 1) * (pct / 100.0)
+            floor_idx = int(idx)
+            ceil_idx = min(floor_idx + 1, len(sorted_list) - 1)
+            weight = idx - floor_idx
+            return sorted_list[floor_idx] * (1.0 - weight) + sorted_list[ceil_idx] * weight
+
+        q10 = calc_percentile(sorted_errors, 10)
+        q25 = calc_percentile(sorted_errors, 25)
+        q50 = calc_percentile(sorted_errors, 50)
+        q75 = calc_percentile(sorted_errors, 75)
+        q90 = calc_percentile(sorted_errors, 90)
+
+        sum_forecasts = sum(forecasts)
+        avg_actual = sum_actuals / N
+        avg_forecast = sum_forecasts / N
 
         return {
             "sample_count": N,
@@ -65,14 +85,14 @@ class AccuracyEngine:
             "rmse_mw": round(rmse, 2),
             "bias_mw": round(bias, 2),
             "wape_percent": round(wape, 2),
-            "overforecast_count": overforecast_count,
-            "underforecast_count": underforecast_count,
+            "overforecast_count": int(overforecast_count),
+            "underforecast_count": int(underforecast_count),
             "overforecast_rate_percent": round(overforecast_count / N * 100.0, 1),
             "underforecast_rate_percent": round(underforecast_count / N * 100.0, 1),
             "total_actual_mwh": round(sum_actuals, 2),
-            "total_forecast_mwh": round(float(np.sum(forecasts)), 2),
-            "average_actual_mw": round(float(np.mean(actuals)), 2),
-            "average_forecast_mw": round(float(np.mean(forecasts)), 2),
+            "total_forecast_mwh": round(sum_forecasts, 2),
+            "average_actual_mw": round(avg_actual, 2),
+            "average_forecast_mw": round(avg_forecast, 2),
             "quantiles": {
                 "p10": round(float(q10), 2),
                 "p25": round(float(q25), 2),
@@ -158,14 +178,26 @@ class AccuracyEngine:
         scatter_points = []
         if all_pairs:
             errors = [p["forecast"] - p["actual"] for p in all_pairs]
-            counts, bin_edges = np.histogram(errors, bins=20)
+            min_e = min(errors)
+            max_e = max(errors)
+            if max_e == min_e:
+                max_e += 1.0
+            bins = 20
+            bin_width = (max_e - min_e) / bins
+            bin_edges = [min_e + i * bin_width for i in range(bins + 1)]
+            counts = [0] * bins
+            for e in errors:
+                b_idx = min(int((e - min_e) / bin_width), bins - 1)
+                counts[b_idx] += 1
+
             for i in range(len(counts)):
                 error_distribution.append({
-                    "bin_min": round(float(bin_edges[i]), 1),
-                    "bin_max": round(float(bin_edges[i+1]), 1),
-                    "bin_center": round(float((bin_edges[i] + bin_edges[i+1]) / 2.0), 1),
-                    "count": int(counts[i]),
+                    "bin_min": round(bin_edges[i], 1),
+                    "bin_max": round(bin_edges[i+1], 1),
+                    "bin_center": round((bin_edges[i] + bin_edges[i+1]) / 2.0, 1),
+                    "count": counts[i],
                 })
+
             # Subsample scatter points if large, up to 500 points
             stride = max(1, len(all_pairs) // 500)
             for p in all_pairs[::stride]:

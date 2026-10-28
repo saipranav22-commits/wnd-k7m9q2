@@ -1,0 +1,5 @@
+[project]
+name = "app"
+version = "0.1.0"
+dependencies = [ "fastapi>=0.110.0", "pydantic>=2.6.0", "sqlalchemy>=2.0.28", "python-dateutil>=2.9.0", "pytz>=2024.1" ]
+requires-python = "~=3.14.0"

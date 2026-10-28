@@ -5,6 +5,7 @@ __pycache__/
 *$py.class
 *.so
 .pytest_cache/
+_uv/
 
 # Node & Frontend
 node_modules/
@@ -19,5 +20,8 @@ yarn-error.log*
 .idea/
 .vscode/
 
-# Caches
+# Caches & Deployments
 .cache/
+.vercel/
+
+.vercel
