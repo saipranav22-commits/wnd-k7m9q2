@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
@@ -6,6 +7,7 @@ from backend.services.point_in_time import PointInTimeEngine
 from backend.services.accuracy_engine import AccuracyEngine
 from backend.config import DEFAULT_DECISION_START_DATE, DEFAULT_DECISION_CUTOFF_TIME
 
+logger = logging.getLogger("aeris.overview")
 router = APIRouter(prefix="/api", tags=["Overview"])
 
 @router.get("/overview", response_model=OverviewResponse)
@@ -79,6 +81,8 @@ def get_overview(
         )
 
     except ValueError as ve:
+        logger.warning(f"Overview parameter validation error: {ve}")
         raise HTTPException(status_code=400, detail=f"Invalid date or time parameter: {ve}")
     except Exception as e:
+        logger.error(f"Overview computation error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error generating overview: {e}")

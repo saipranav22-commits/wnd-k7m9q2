@@ -56,6 +56,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def vercel_routing_middleware(request, call_next):
+    """
+    Ensures seamless routing under Vercel serverless rewrites and custom routing paths.
+    Maps /overview -> /api/overview, and resolves x-matched-path if Vercel routes to /api/index.py.
+    """
+    path = request.scope.get("path", "")
+    if path in ("/api/index.py", "/api/index", "/api/"):
+        orig = (
+            request.headers.get("x-matched-path")
+            or request.headers.get("x-vercel-matched-path")
+            or request.headers.get("x-forwarded-uri")
+            or request.headers.get("x-original-uri")
+        )
+        if orig:
+            clean = orig.split("?")[0]
+            if clean and clean != path:
+                request.scope["path"] = clean
+    elif not path.startswith("/api") and not path.startswith("/docs") and not path.startswith("/redoc") and not path.startswith("/openapi.json"):
+        request.scope["path"] = f"/api{path}"
+
+    return await call_next(request)
+
 # Mount modular routers
 app.include_router(health.router)
 app.include_router(metadata.router)

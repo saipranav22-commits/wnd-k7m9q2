@@ -184,37 +184,46 @@ export interface RecordsResponse {
 
 const API_BASE = "";
 
+async function handleResponse<T>(res: Response, fallbackMsg: string): Promise<T> {
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const err = await res.json();
+      detail = err.detail || "";
+    } catch {
+      // response was not JSON
+    }
+    throw new Error(detail ? `${fallbackMsg}: ${detail}` : `${fallbackMsg} (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
 export async function fetchHealth(): Promise<HealthResponse> {
   const res = await fetch(`${API_BASE}/api/health`);
-  if (!res.ok) throw new Error("Health check failed");
-  return res.json();
+  return handleResponse<HealthResponse>(res, "Health check failed");
 }
 
 export async function fetchMetadata(): Promise<MetadataResponse> {
   const res = await fetch(`${API_BASE}/api/metadata`);
-  if (!res.ok) throw new Error("Metadata fetch failed");
-  return res.json();
+  return handleResponse<MetadataResponse>(res, "Metadata fetch failed");
 }
 
 export async function fetchOverview(decisionDate: string, cutoffTime: string): Promise<OverviewResponse> {
   const params = new URLSearchParams({ decision_date: decisionDate, cutoff_time: cutoffTime });
   const res = await fetch(`${API_BASE}/api/overview?${params}`);
-  if (!res.ok) throw new Error("Overview fetch failed");
-  return res.json();
+  return handleResponse<OverviewResponse>(res, "Overview fetch failed");
 }
 
 export async function fetchDecisions(decisionDate: string, cutoffTime: string): Promise<DecisionExplorerResponse> {
   const params = new URLSearchParams({ decision_date: decisionDate, cutoff_time: cutoffTime });
   const res = await fetch(`${API_BASE}/api/decisions?${params}`);
-  if (!res.ok) throw new Error("Decisions fetch failed");
-  return res.json();
+  return handleResponse<DecisionExplorerResponse>(res, "Decisions fetch failed");
 }
 
 export async function fetchAccuracy(dateFrom: string, dateTo: string, cutoffTime: string): Promise<AccuracyResponse> {
   const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo, cutoff_time: cutoffTime });
   const res = await fetch(`${API_BASE}/api/accuracy?${params}`);
-  if (!res.ok) throw new Error("Accuracy fetch failed");
-  return res.json();
+  return handleResponse<AccuracyResponse>(res, "Accuracy fetch failed");
 }
 
 export async function fetchRecords(params: {
@@ -236,8 +245,7 @@ export async function fetchRecords(params: {
   if (params.page_size) q.set("page_size", params.page_size.toString());
 
   const res = await fetch(`${API_BASE}/api/records?${q}`);
-  if (!res.ok) throw new Error("Records fetch failed");
-  return res.json();
+  return handleResponse<RecordsResponse>(res, "Records fetch failed");
 }
 
 export function getExportCsvUrl(dateFrom: string, dateTo: string, cutoffTime: string): string {

@@ -152,3 +152,11 @@ def test_csv_formula_injection_safety():
     assert sanitize_csv_cell("+142.5") == "+142.5"
     assert sanitize_csv_cell(0) == 0
     assert sanitize_csv_cell(None) == ""
+
+def test_vercel_serverless_sqlite_resolution(monkeypatch):
+    """Verify that in serverless runtime (VERCEL=1), resolve_sqlite_path finds aeris.db and resolves valid path."""
+    from backend.config import resolve_sqlite_path
+    monkeypatch.setenv("VERCEL", "1")
+    resolved = resolve_sqlite_path()
+    assert resolved.exists(), f"Resolved database does not exist: {resolved}"
+    assert resolved.stat().st_size > 1_000_000, f"Database is truncated: {resolved.stat().st_size} bytes"

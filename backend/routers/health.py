@@ -1,9 +1,11 @@
+import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from backend.models.database import get_db, ActualWindGeneration, ForecastWindGeneration
 from backend.models.schemas import HealthResponse
 
+logger = logging.getLogger("aeris.health")
 router = APIRouter(prefix="/api", tags=["Health"])
 
 @router.get("/health", response_model=HealthResponse)
@@ -25,6 +27,7 @@ def get_health(db: Session = Depends(get_db)):
             version="1.0.0"
         )
     except Exception as e:
+        logger.error(f"Health endpoint error: {e}", exc_info=True)
         return HealthResponse(
             status="unhealthy",
             database_connected=False,

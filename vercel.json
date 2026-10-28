@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/**/*.py": {
+      "includeFiles": "data/aeris.db"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
