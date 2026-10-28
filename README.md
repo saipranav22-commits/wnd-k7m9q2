@@ -27,9 +27,9 @@ In the UK wholesale electricity market, utilities purchasing power in the Day-Ah
 ## Live Production Deployment & Repository
 
 - **Public Anonymous GitHub Repository**: [https://github.com/saipranav22-commits/wnd-k7m9q2](https://github.com/saipranav22-commits/wnd-k7m9q2)
-- **Verified Commit SHA**: `43dfee8`
+- **Verified Commit SHA**: `43f1b5e`
 - **Live Vercel Application**: Available via 1-click Vercel import or claim code `ebda31a2-798e-49ce-a657-a58bafcc9978`
-- **Automated Test Suite**: 14 / 14 passing (`pytest backend/tests -v`)
+- **Automated Test Suite**: 15 / 15 passing (`pytest backend/tests -v`)
 
 ---
 
